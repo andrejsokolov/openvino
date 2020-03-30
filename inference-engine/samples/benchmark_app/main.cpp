@@ -10,6 +10,8 @@
 #include <vector>
 #include <utility>
 
+#include <ngraph/frontend/onnx_import/onnx.hpp>
+
 #include <inference_engine.hpp>
 #include <vpu/vpu_plugin_config.hpp>
 #include <cldnn/cldnn_config.hpp>
@@ -100,6 +102,10 @@ T getMedianValue(const std::vector<T> &vec) {
     return (sortedVec.size() % 2 != 0) ?
            sortedVec[sortedVec.size() / 2ULL] :
            (sortedVec[sortedVec.size() / 2ULL] + sortedVec[sortedVec.size() / 2ULL - 1ULL]) / static_cast<T>(2.0);
+}
+
+static bool endsWith(const std::string &str, const std::string &suffix) {
+    return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
 }
 
 /**
@@ -307,9 +313,19 @@ int main(int argc, char *argv[]) {
             next_step();
 
             slog::info << "Loading network files" << slog::endl;
-
             auto startTime = Time::now();
-            CNNNetwork cnnNetwork = ie.ReadNetwork(FLAGS_m);
+
+            CNNNetwork cnnNetwork;
+            if (endsWith(FLAGS_m, ".onnx")) {
+                std::ifstream model_file_stream(FLAGS_m);
+                if (!model_file_stream.is_open())
+                    throw std::logic_error("smth bad with ONNX model file " + FLAGS_m);
+                const std::shared_ptr<ngraph::Function> ng_function = ngraph::onnx_import::import_onnx_model(model_file_stream);
+                model_file_stream.close();
+                cnnNetwork = CNNNetwork(ng_function);
+            } else {
+                cnnNetwork = ie.ReadNetwork(FLAGS_m);
+            }
             auto duration_ms = double_to_string(get_total_ms_time(startTime));
             slog::info << "Read network took " << duration_ms << " ms" << slog::endl;
             if (statistics)
