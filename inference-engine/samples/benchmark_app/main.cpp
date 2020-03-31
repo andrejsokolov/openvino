@@ -322,6 +322,12 @@ int main(int argc, char *argv[]) {
                     throw std::logic_error("smth bad with ONNX model file " + FLAGS_m);
                 const std::shared_ptr<ngraph::Function> ng_function = ngraph::onnx_import::import_onnx_model(model_file_stream);
                 model_file_stream.close();
+
+                // HARD-CODE: for mask rcnn onnx model input shape
+                if (ng_function->get_parameters().size() != 1)
+                    throw std::logic_error("unexpected Parameters number in ONNX model file " + FLAGS_m);
+                ng_function->get_parameters()[0]->set_partial_shape({3, 800, 1088});
+                // END OF HARD-CODE
                 cnnNetwork = CNNNetwork(ng_function);
             } else {
                 cnnNetwork = ie.ReadNetwork(FLAGS_m);
