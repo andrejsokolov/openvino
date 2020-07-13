@@ -143,10 +143,10 @@ IE_SUPPRESS_DEPRECATED_END
     if (const auto envVar = std::getenv("IE_VPU_MYRIAD_FORCE_RESET")) {
         _forceReset = std::stoi(envVar);
     }
+#endif
     if (const auto envVar = std::getenv("IE_VPU_MYRIAD_WATCHDOG_INTERVAL")) {
         _watchdogInterval = std::chrono::milliseconds(std::stoi(envVar));
     }
-#endif
 }
 
 }  // namespace MyriadPlugin
