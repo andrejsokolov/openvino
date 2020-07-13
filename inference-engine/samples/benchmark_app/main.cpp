@@ -19,6 +19,7 @@
 #include <samples/common.hpp>
 #include <samples/slog.hpp>
 #include <samples/args_helper.hpp>
+#include <ngraph/pass/visualize_tree.hpp>
 
 #include "benchmark_app.hpp"
 #include "infer_request_wrap.hpp"
@@ -461,7 +462,7 @@ int main(int argc, char *argv[]) {
             // default time limit
             duration_seconds = deviceDefaultDeviceDurationInSeconds(device_name);
         }
-        uint64_t duration_nanoseconds = getDurationInNanoseconds(duration_seconds);
+//        uint64_t duration_nanoseconds = getDurationInNanoseconds(duration_seconds);
 
         if (statistics) {
             statistics->addParameters(StatisticsReport::Category::RUNTIME_CONFIG,
@@ -493,9 +494,9 @@ int main(int argc, char *argv[]) {
         fillBlobs(inputFiles, batchSize, info, inferRequestsQueue.requests);
 
         // ----------------- 10. Measuring performance ------------------------------------------------------------------
-        size_t progressCnt = 0;
-        size_t progressBarTotalCount = progressBarDefaultTotalCount;
-        size_t iteration = 0;
+//        size_t progressCnt = 0;
+//        size_t progressBarTotalCount = progressBarDefaultTotalCount;
+//        size_t iteration = 0;
 
         std::stringstream ss;
         ss << "Start inference " << FLAGS_api << "ronously";
@@ -521,7 +522,7 @@ int main(int argc, char *argv[]) {
         }
         if (niter != 0) {
             if (duration_seconds == 0) {
-                progressBarTotalCount = niter;
+//                progressBarTotalCount = niter;
             }
             if (duration_seconds > 0) {
                 ss << ", ";
@@ -550,6 +551,61 @@ int main(int argc, char *argv[]) {
                                         });
         inferRequestsQueue.resetTimes();
 
+        {
+            const auto name = "6379";
+            auto const& out0 = inferRequest->getBlob(name);
+            MemoryBlob::CPtr moutput = as<MemoryBlob>(out0);
+            auto moutputHolder = moutput->rmap();
+            const auto *pointer = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
+            auto const& dims = out0->getTensorDesc().getDims();
+            for (auto const& dim : dims) {
+                std::cout << dim << " ";
+            }
+            std::cout << std::endl;
+            auto const size = dims.empty() ? 0 : std::accumulate(dims.cbegin(), dims.cend(), static_cast<std::size_t>(1), std::multiplies<std::size_t>());
+            std::cout << name << " has " << size << " output elements" << std::endl;
+            for (std::size_t i = 0; i < size; ++i) {
+                std::cout << pointer[i] << std::endl;
+            }
+        }
+
+        {
+            const auto name = "6381";
+            auto const& out0 = inferRequest->getBlob(name);
+            MemoryBlob::CPtr moutput = as<MemoryBlob>(out0);
+            auto moutputHolder = moutput->rmap();
+            const auto *pointer = moutputHolder.as<const PrecisionTrait<Precision::I32>::value_type *>();
+            auto const& dims = out0->getTensorDesc().getDims();
+            for (auto const& dim : dims) {
+                std::cout << dim << " ";
+            }
+            std::cout << std::endl;
+            auto const size = dims.empty() ? 0 : std::accumulate(dims.cbegin(), dims.cend(), static_cast<std::size_t>(1), std::multiplies<std::size_t>());
+            std::cout << name << " has " << size << " output elements" << std::endl;
+            for (std::size_t i = 0; i < size; ++i) {
+                std::cout << pointer[i] << std::endl;
+            }
+        }
+
+        {
+            const auto name = "6383";
+            auto const& out0 = inferRequest->getBlob(name);
+            MemoryBlob::CPtr moutput = as<MemoryBlob>(out0);
+            auto moutputHolder = moutput->rmap();
+            const auto *pointer = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
+            auto const& dims = out0->getTensorDesc().getDims();
+            for (auto const& dim : dims) {
+                std::cout << dim << " ";
+            }
+            std::cout << std::endl;
+            auto const size = dims.empty() ? 0 : std::accumulate(dims.cbegin(), dims.cend(), static_cast<std::size_t>(1), std::multiplies<std::size_t>());
+            std::cout << name << " has " << size << " output elements" << std::endl;
+            for (std::size_t i = 0; i < size; ++i) {
+                std::cout << pointer[i] << std::endl;
+            }
+        }
+
+#if 0
         auto startTime = Time::now();
         auto execTime = std::chrono::duration_cast<ns>(Time::now() - startTime).count();
 
@@ -664,6 +720,7 @@ int main(int argc, char *argv[]) {
         if (device_name.find("MULTI") == std::string::npos)
             std::cout << "Latency:    " << double_to_string(latency) << " ms" << std::endl;
         std::cout << "Throughput: " << double_to_string(fps) << " FPS" << std::endl;
+#endif
     } catch (const std::exception& ex) {
         slog::err << ex.what() << slog::endl;
 
