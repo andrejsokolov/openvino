@@ -28,10 +28,6 @@
 
 namespace vpu {
 
-void printTo(std::ostream& stream, const ngraph::NodeTypeInfo& object) {
-    stream << object.name << " ver. " << object.version;
-}
-
 namespace {
 
 using namespace ngraph;

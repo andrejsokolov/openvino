@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <ngraph/node.hpp>
+
 #include <vpu/utils/small_vector.hpp>
 #include <vpu/utils/intrusive_handle_list.hpp>
 
@@ -240,6 +242,8 @@ template <typename K, typename V, class H, class P, class A>
 void printTo(std::ostream& os, const std::unordered_map<K, V, H, P, A>& map) {
     details::printMap(os, map);
 }
+
+void printTo(std::ostream& stream, const ngraph::NodeTypeInfo& object);
 
 template <typename T, typename... Args>
 void formatPrint(std::ostream& os, const char* str, const T& val, const Args&... args) {

@@ -8,6 +8,10 @@
 
 namespace vpu {
 
+void printTo(std::ostream& stream, const ngraph::NodeTypeInfo& object) {
+    stream << object.name << " ver. " << object.version;
+}
+
 void formatPrint(std::ostream& os, const char* str) {
     while (*str) {
         if (*str == '%') {
