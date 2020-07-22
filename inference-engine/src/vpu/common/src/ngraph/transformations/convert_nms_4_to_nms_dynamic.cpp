@@ -6,6 +6,7 @@
 
 #include <vpu/ngraph/operations/dynamic_non_max_suppression.hpp>
 #include <ngraph/graph_util.hpp>
+#include <ngraph/opsets/opset3.hpp>
 #include <ngraph/opsets/opset4.hpp>
 #include <ngraph/rt_info.hpp>
 #include <transformations/utils/utils.hpp>
@@ -19,11 +20,11 @@ void vpu::UpgradeNMS4ToNMSDynamic::upgrade_nms4_to_nms_dynamic() {
     auto max_output_boxes_per_class = ngraph::opset4::Constant::create(ngraph::element::i64, ngraph::Shape{}, {10});
     auto iou_threshold = ngraph::opset4::Constant::create(ngraph::element::f32, ngraph::Shape{}, {0.75});
     auto score_threshold = ngraph::opset4::Constant::create(ngraph::element::f32, ngraph::Shape{}, {0.7});
-    auto nms = std::make_shared<ngraph::opset4::NonMaxSuppression>(boxes, scores, max_output_boxes_per_class,
+    auto nms = std::make_shared<ngraph::opset3::NonMaxSuppression>(boxes, scores, max_output_boxes_per_class,
                                                                    iou_threshold, score_threshold);
 
     ngraph::graph_rewrite_callback callback = [](ngraph::pattern::Matcher &m) {
-        auto nms_4 = std::dynamic_pointer_cast<ngraph::opset4::NonMaxSuppression>(m.get_match_root());
+        auto nms_4 = std::dynamic_pointer_cast<ngraph::opset3::NonMaxSuppression>(m.get_match_root());
         if (!nms_4) {
             return false;
         }
