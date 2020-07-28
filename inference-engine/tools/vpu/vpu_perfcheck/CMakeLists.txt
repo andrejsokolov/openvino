@@ -39,7 +39,8 @@ function(add_perfcheck_target TARGET_NAME PLUGIN_NAME)
     target_link_libraries(${TARGET_NAME}
         PRIVATE
             inference_engine format_reader
-            Threads::Threads)
+            Threads::Threads
+            onnx_importer)
 
     add_dependencies(${TARGET_NAME}
         ${PLUGIN_NAME} ${ARGN})
