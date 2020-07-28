@@ -34,6 +34,8 @@
 #include <inference_engine.hpp>
 #include <common.hpp>
 #include <vpu/vpu_plugin_config.hpp>
+#include <ngraph/frontend/onnx_import/onnx.hpp>
+#include <vpu/private_plugin_config.hpp>
 
 static char* m_exename = nullptr;
 
@@ -156,6 +158,7 @@ static void setConfig(std::map<std::string, std::string>& config,
                       const std::string& file_config_cl) {
     config[CONFIG_KEY(LOG_LEVEL)] = CONFIG_VALUE(LOG_WARNING);
     config[VPU_CONFIG_KEY(PRINT_RECEIVE_TENSOR_TIME)] = CONFIG_VALUE(YES);
+    config[VPU_CONFIG_KEY(PERF_REPORT_MODE)] = VPU_CONFIG_VALUE(PER_STAGE);
     config[VPU_CONFIG_KEY(CUSTOM_LAYERS)] = file_config_cl;
 }
 
@@ -289,7 +292,7 @@ static void getBINFiles(std::vector<std::string> &out, const std::string &direct
 
 int num_requests = 4;
 
-#define MIN_ITER 1000
+#define MIN_ITER 1
 
 #define USE_CALLBACK
 
@@ -303,8 +306,12 @@ std::vector<time_point> iter_start;
 std::vector<time_point> iter_end;
 std::vector<double> iter_time;
 
-const int profile = 0;
+const int profile = 1;
 std::map<std::string, InferenceEngine::InferenceEngineProfileInfo> perfMap;
+
+static bool endsWith(const std::string &str, const std::string &suffix) {
+    return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
+}
 
 int process(const std::string& modelFileName, const std::string& inputsDir,
             std::string& file_config_cl, int nBatch, int num_networks) {
@@ -353,7 +360,25 @@ int process(const std::string& modelFileName, const std::string& inputsDir,
         return 1;
     }
 
-    InferenceEngine::CNNNetwork cnnNetwork = ie.ReadNetwork(modelFileName);
+
+    InferenceEngine::CNNNetwork cnnNetwork;
+    if (endsWith(modelFileName, ".onnx")) {
+        std::ifstream model_file_stream(modelFileName);
+        if (!model_file_stream.is_open())
+            throw std::logic_error("smth bad with ONNX model file " + modelFileName);
+        const std::shared_ptr<ngraph::Function> ng_function = ngraph::onnx_import::import_onnx_model(model_file_stream);
+        model_file_stream.close();
+
+        // HARD-CODE: for mask rcnn onnx model input shape
+        if (ng_function->get_parameters().size() != 1)
+            throw std::logic_error("unexpected Parameters number in ONNX model file " + modelFileName);
+        ng_function->get_parameters()[0]->set_partial_shape({3, 800, 1088});
+        // END OF HARD-CODE
+        cnnNetwork = InferenceEngine::CNNNetwork(ng_function);
+    } else {
+        cnnNetwork = ie.ReadNetwork(modelFileName);
+    }
+//    InferenceEngine::CNNNetwork cnnNetwork = ie.ReadNetwork(modelFileName);
 
     if (nBatch != 1) {
         std::cout << "Setting batch to : "<< nBatch << "\n";
@@ -412,7 +437,7 @@ int process(const std::string& modelFileName, const std::string& inputsDir,
             auto layout = inputBlob->getTensorDesc().getLayout();
 
             // number of channels is 3 for Image, dims order is always NCHW
-            const bool isImage = ((layout == InferenceEngine::NHWC || layout == InferenceEngine::NCHW) && dims[1] == 3);
+            const bool isImage = (layout == InferenceEngine::NHWC || layout == InferenceEngine::NCHW || layout == InferenceEngine::CHW);
             const bool isVideo = (inputBlob->getTensorDesc().getDims().size() == 5);
             if (isImage && (numPictures > 0)) {
                 if (!loadImage(pictures[(idxPic++) % numPictures], inputBlob))
@@ -431,6 +456,14 @@ int process(const std::string& modelFileName, const std::string& inputsDir,
 
         IECALL(request[r]->SetCompletionCallback(
                 [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode code) {
+                    std::cout << "Infer ended" << std::endl;
+                    InferenceEngine::Blob::Ptr blob;
+                    request->GetBlob("6381", blob, nullptr);
+                    std::cout << "Blob pointer: " << blob << std::endl;
+                    if (blob) {
+                        std::cout << "Detections num: " << blob->getTensorDesc().getDims()[0] << std::endl;
+                    }
+
                     if (code != InferenceEngine::OK) {
                         std::cout << "Infer failed: " << code << std::endl;
                         exit(1);
@@ -694,28 +727,51 @@ static bool loadImage(const std::string &imageFilename, InferenceEngine::Blob::P
         return false;
     }
 
-    if (layout != InferenceEngine::NHWC && layout != InferenceEngine::NCHW) {
-        std::cout << "loadImage error: Input must have NCHW or NHWC layout" << std::endl;
-        return false;
-    }
+//    if (layout != InferenceEngine::NHWC && layout != InferenceEngine::NCHW) {
+//        std::cout << "loadImage error: Input must have NCHW or NHWC layout" << std::endl;
+//        return false;
+//    }
 
     BitMap reader(imageFilename);
 
     const auto dims = tensDesc.getDims();
 
-    const size_t N = dims[0];
-    const size_t C = dims[1];
-    const size_t H = dims[2];
-    const size_t W = dims[3];
+    size_t N = 1;
+    size_t C = 1;
+    size_t H = 1;
+    size_t W = 1;
+
+    if (layout == InferenceEngine::CHW) {
+        C = dims[0];
+        H = dims[1];
+        W = dims[2];
+    } else {
+        N = dims[0];
+        C = dims[1];
+        H = dims[2];
+        W = dims[3];
+    }
 
     const size_t img_w = reader.width();
     const size_t img_h = reader.height();
 
     const auto strides = tensDesc.getBlockingDesc().getStrides();
-    const auto strideN = strides[0];
-    const auto strideC = layout == InferenceEngine::NHWC ? strides[3] : strides[1];
-    const auto strideH = layout == InferenceEngine::NHWC ? strides[1] : strides[2];
-    const auto strideW = layout == InferenceEngine::NHWC ? strides[2] : strides[3];
+
+    size_t strideN = 1;
+    size_t strideC = 1;
+    size_t strideH = 1;
+    size_t strideW = 1;
+
+    if (layout == InferenceEngine::CHW) {
+        strideC = strides[0];
+        strideH = strides[1];
+        strideW = strides[2];
+    } else {
+        strideN = strides[0];
+        strideC = layout == InferenceEngine::NHWC ? strides[3] : strides[1];
+        strideH = layout == InferenceEngine::NHWC ? strides[1] : strides[2];
+        strideW = layout == InferenceEngine::NHWC ? strides[2] : strides[3];
+    }
 
     const size_t numImageChannels = reader.size() / (reader.width() * reader.height());
     if (C != numImageChannels && C != 1) {
