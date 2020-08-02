@@ -252,6 +252,78 @@ void BackEnd::serialize(
     const auto& execStages = getExecStages();
     numActiveStages = checked_cast<int>(execStages.size());
 
+#if 0
+    {
+        std::ofstream debugFile("/home/ggladilo/dev/openvino/debug-1.log");
+        for (auto const& stage : model->getStages()) {
+            debugFile << stage->name() << " (" << stage->type() << "): ";
+
+            debugFile << "[";
+            for (std::size_t i = 0; i < stage->numInputs(); ++i) {
+                auto const &input = stage->input(i);
+                debugFile << input->name();
+                if (auto const &edge = input->parentDataToShapeEdge()) {
+                    debugFile << " <-- " << edge->parent()->name();
+                }
+                if (i < stage->numInputs() - 1) {
+                    debugFile << ", ";
+                }
+            }
+            debugFile << "]";
+            debugFile << " ";
+            debugFile << "[";
+            for (std::size_t i = 0; i < stage->numOutputs(); ++i) {
+                auto const &output = stage->output(i);
+                debugFile << output->name();
+                if (auto const &edge = output->parentDataToShapeEdge()) {
+                    debugFile << " <-- " << edge->parent()->name();
+                }
+                if (i < stage->numOutputs() - 1) {
+                    debugFile << ", ";
+                }
+            }
+            debugFile << "]";
+            debugFile << std::endl;
+        }
+    }
+
+    {
+        std::ofstream debugFile("/home/ggladilo/dev/openvino/debug-codes.log");
+        std::size_t code = 0;
+        for (auto const& stage : execStages) {
+            debugFile << stage->name() << " (" << stage->type() << "): ";
+
+            debugFile << "[";
+            for (std::size_t i = 0; i < stage->numInputs(); ++i) {
+                auto const &input = stage->input(i);
+                debugFile << input->name();
+                if (auto const &edge = input->parentDataToShapeEdge()) {
+                    debugFile << " <-- " << edge->parent()->name();
+                }
+                if (i < stage->numInputs() - 1) {
+                    debugFile << ", ";
+                }
+            }
+            debugFile << "]";
+            debugFile << " ";
+            debugFile << "[";
+            for (std::size_t i = 0; i < stage->numOutputs(); ++i) {
+                auto const &output = stage->output(i);
+                debugFile << output->name();
+                if (auto const &edge = output->parentDataToShapeEdge()) {
+                    debugFile << " <-- " << edge->parent()->name();
+                }
+                if (i < stage->numOutputs() - 1) {
+                    debugFile << ", ";
+                }
+            }
+            debugFile << "]";
+            debugFile << " idx = " << code;
+            debugFile << std::endl;
+            code++;
+        }
+    }
+#endif
     for (const auto& stage : execStages) {
         stage->serialize(stagesSerializer);
     }
