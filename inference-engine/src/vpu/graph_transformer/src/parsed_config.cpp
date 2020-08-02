@@ -239,14 +239,8 @@ IE_SUPPRESS_DEPRECATED_END
     if (const auto envVar = std::getenv("IE_VPU_COMPILER_LOG_FILE_PATH")) {
         _compilerLogFilePath = envVar;
     }
-    if (const auto envVar = std::getenv("IE_VPU_DUMP_INTERNAL_GRAPH_FILE_NAME")) {
-        _compileConfig.dumpInternalGraphFileName = envVar;
-    }
     if (const auto envVar = std::getenv("IE_VPU_DUMP_INTERNAL_GRAPH_DIRECTORY")) {
         _compileConfig.dumpInternalGraphDirectory = envVar;
-    }
-    if (const auto envVar = std::getenv("IE_VPU_DUMP_ALL_PASSES")) {
-        _compileConfig.dumpAllPasses = std::stoi(envVar) != 0;
     }
     if (const auto envVar = std::getenv("IE_VPU_NUMBER_OF_SHAVES_AND_CMX_SLICES")) {
         _compileConfig.numSHAVEs = _compileConfig.numCMXSlices = preprocessCompileOption(envVar);
@@ -255,6 +249,12 @@ IE_SUPPRESS_DEPRECATED_END
         _compileConfig.tilingCMXLimitKB = preprocessCompileOption(envVar);
     }
 #endif
+    if (const auto envVar = std::getenv("IE_VPU_DUMP_INTERNAL_GRAPH_FILE_NAME")) {
+        _compileConfig.dumpInternalGraphFileName = envVar;
+    }
+    if (const auto envVar = std::getenv("IE_VPU_DUMP_ALL_PASSES")) {
+        _compileConfig.dumpAllPasses = std::stoi(envVar) != 0;
+    }
 }
 
 }  // namespace vpu
