@@ -190,6 +190,7 @@ bool ngraph::pass::GroupedStridedSliceOptimizer::run_on_function(std::shared_ptr
             size_splits.push_back(item.second);
         auto size_splits_const = ngraph::opset1::Constant::create(ngraph::element::i64, ngraph::Shape{size_splits.size()}, size_splits);
         auto variadic_split = std::make_shared<ngraph::opset1::VariadicSplit>(pair.first, axis_const, size_splits_const);
+        variadic_split->set_friendly_name(output_to_size.begin()->first.get_node_shared_ptr()->get_friendly_name());
 
         auto i = 0;
         NodeVector ops_to_replace;
