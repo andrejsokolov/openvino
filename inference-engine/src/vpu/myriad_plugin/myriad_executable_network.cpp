@@ -85,6 +85,28 @@ ExecutableNetwork::ExecutableNetwork(
     }
 
     auto networkName = network.getName();
+#if 0
+    std::cerr << "LOADING MODEL..." <<std::endl;
+    std::cerr << "NUM EXECUTORS = " << _actualNumExecutors << std::endl;
+    std::cerr << "networkName = " << networkName << " " << std::string {networkName}.size() << std::endl;
+    std::cerr << "numStages = " << compiledGraph->numActiveStages << std::endl;
+
+    {
+        std::uint64_t hash = 0;
+        for (std::size_t i = 0; i < compiledGraph->blobHeader.second; ++i) {
+            hash += static_cast<std::uint8_t>(compiledGraph->blobHeader.first[i]);
+        }
+        std::cerr << "blobHeader HASH = " << hash << std::endl;
+    }
+
+    {
+        std::uint64_t hash = 0;
+        for (std::size_t i = 0; i < _graphBlob.size(); ++i) {
+            hash += static_cast<std::uint8_t>(_graphBlob[i]);
+        }
+        std::cerr << "graphBlob HASH = " << hash << std::endl;
+    }
+#endif
     _executor->allocateGraph(_device, _graphDesc, _graphBlob, compiledGraph->blobHeader, compiledGraph->numActiveStages, networkName, _actualNumExecutors);
     if (_config.exclusiveAsyncRequests()) {
         ExecutorManager *executorManager = ExecutorManager::getInstance();
@@ -113,8 +135,8 @@ void ExecutableNetwork::Import(std::istream& strm,
     }
 
     // TODO: better name
-    char networkName[1024] = "importedNetwork";
-
+//    char networkName[1024] = "importedNetwork";
+    std::string networkName = "torch-jit-export";
     BlobReader blobReader;
     blobReader.parse(_graphBlob);
 
@@ -126,6 +148,28 @@ void ExecutableNetwork::Import(std::istream& strm,
     _inputInfo  = blobReader.getInputInfo();
     _outputInfo = blobReader.getOutputInfo();
 
+#if 0
+    std::cerr << "IMPORTING MODEL..." <<std::endl;
+    std::cerr << "NUM EXECUTORS = " << _actualNumExecutors << std::endl;
+    std::cerr << "networkName = " << networkName << " " << std::string {networkName}.size() << std::endl;
+    std::cerr << "numStages = " << numStages << std::endl;
+
+    {
+        std::uint64_t hash = 0;
+        for (std::size_t i = 0; i < blobHeader.second; ++i) {
+            hash += static_cast<std::uint8_t>(blobHeader.first[i]);
+        }
+        std::cerr << "blobHeader HASH = " << hash << std::endl;
+    }
+
+    {
+        std::uint64_t hash = 0;
+        for (std::size_t i = 0; i < _graphBlob.size(); ++i) {
+            hash += static_cast<std::uint8_t>(_graphBlob[i]);
+        }
+        std::cerr << "graphBlob HASH = " << hash << std::endl;
+    }
+#endif
     _executor->allocateGraph(_device, _graphDesc, _graphBlob, blobHeader, numStages, networkName, _actualNumExecutors);
 
     _graphMetaData.stagesMeta.resize(numStages);
