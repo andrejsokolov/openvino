@@ -27,6 +27,10 @@ public:
     explicit PassImpl(StageBuilder::Ptr stageBuilder) : _stageBuilder(std::move(stageBuilder)) {}
 
     static void validateShapeConversion(const Stage& stage, const Data& shape) {
+        if (shape->desc().totalDimSize() == 1) {
+            return;
+        }
+
         const auto& shapeAttrs = shape->attrs();
         VPU_THROW_UNLESS(shapeAttrs.getOrDefault("converted-notation", false),
                 "Validation shape conversion while propagation dynamism for stage {} of name {} failed: All shape parent "

@@ -32,6 +32,10 @@ void PassImpl::run(const Model& model) {
     }
 
     for (const auto& shape : shapes) {
+         if (shape->desc().totalDimSize() == 1) {
+             continue;
+         }
+
         // Revert shape from IE to MDK notation
         auto convertedShape = model->duplicateData(shape, "@converted-notation");
 
