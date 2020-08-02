@@ -100,7 +100,7 @@ struct CompilationConfig final {
 
     std::string dumpInternalGraphFileName;
     std::string dumpInternalGraphDirectory;
-    bool dumpAllPasses;
+    bool dumpAllPasses = false;
 
     bool disableReorder = false;  // TODO: rename to enableReorder and switch logic.
     bool disableConvertStages = false;
