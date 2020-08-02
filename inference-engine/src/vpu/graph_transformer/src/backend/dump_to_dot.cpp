@@ -44,13 +44,15 @@ namespace {
 
 std::string dataDotName(const Data& data) {
     std::ostringstream ostr;
-    ostr << "data_" << static_cast<const void*>(data.get());
+    static std::size_t dataCounter = 0;
+    ostr << "data_" << dataCounter++/*static_cast<const void*>(data.get())*/;
     return ostr.str();
 }
 
 std::string stageDotName(const Stage& stage) {
     std::ostringstream ostr;
-    ostr << "stage_" << static_cast<const void*>(stage.get());
+    static std::size_t stageCounter = 0;
+    ostr << "stage_" << stageCounter++/*static_cast<const void*>(stage.get())*/;
     return ostr.str();
 }
 
@@ -117,7 +119,13 @@ void BackEnd::dumpModelToDot(
         // Dump datas
         //
 
-        for (const auto& data : model->datas()) {
+        HandleSet<DataNode> printed;
+        const auto print = [&out, &printed](Data const& data) {
+            if (printed.count(data)) {
+                return;
+            }
+            printed.insert(data);
+
             std::string dataColor = "white";
             if (data->usage() == DataUsage::Input) {
                 dataColor = "green";
@@ -179,7 +187,9 @@ void BackEnd::dumpModelToDot(
                 }
                 lbl.appendPair("memReqs", data->memReqs());
                 lbl.appendPair("dataLocation", data->dataLocation().location);
-                lbl.appendPair("dataOffset", data->dataLocation().offset);
+                if (data->usage() != DataUsage::Const) {
+                    lbl.appendPair("dataOffset", data->dataLocation().offset);
+                }
                 lbl.appendPair("dimsLocation", data->shapeLocation().dimsLocation);
                 lbl.appendPair("dimsOffset", data->shapeLocation().dimsOffset);
                 lbl.appendPair("stridesLocation", data->shapeLocation().stridesLocation);
@@ -189,7 +199,25 @@ void BackEnd::dumpModelToDot(
                 }
             }
             out.append("];");
+        };
+
+        for (auto const& stage : model->getStages()) {
+            for (auto const& input : stage->inputs()) {
+                print(input);
+            }
+
+            for (auto const& tempBuffer : stage->tempBuffers()) {
+                print(tempBuffer);
+            }
+
+            for (auto const& output : stage->outputs()) {
+                print(output);
+            }
         }
+
+//        for (const auto& data : model->datas()) {
+//
+//        }
 
         //
         // Dump stages
