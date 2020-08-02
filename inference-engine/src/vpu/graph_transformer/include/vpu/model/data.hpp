@@ -269,13 +269,13 @@ public:
     // Serialize as-is for new MvTensor kernels that can work with ND data.
     void serializeBuffer(BlobSerializer& serializer);
 
-    void serializeIOInfo(BlobSerializer& serializer) const;
+    void serializeIOInfo(BlobSerializer& serializer, bool print = false) const;
 
 private:
     void serializeDescImpl(
             BlobSerializer& serializer,
             const DataDesc& storedDesc,
-            const ShapeLocation& shapeLocation) const;
+            const ShapeLocation& shapeLocation, bool print = false) const;
 
 private:
     inline DataNode() :

@@ -209,7 +209,7 @@ void DataNode::serializeBuffer(
     serializer.append(checked_cast<uint32_t>(_dataLocation.offset));
 }
 
-void DataNode::serializeIOInfo(BlobSerializer& serializer) const {
+void DataNode::serializeIOInfo(BlobSerializer& serializer, bool print) const {
     auto dataIOIdx = attrs().get<int>("ioIdx");
     serializer.append(checked_cast<uint32_t>(dataIOIdx));
 
@@ -240,13 +240,27 @@ void DataNode::serializeIOInfo(BlobSerializer& serializer) const {
         resShapeLocation.stridesOffset = ioStridesUpperBoundOffset;
     }
 
-    serializeDescImpl(serializer, _desc, resShapeLocation);
+    if (print) {
+        std::cerr << "ioIdx" << " " << dataIOIdx << std::endl;
+        std::cerr << "ioBufferOffset" << " " << ioBufferOffset << std::endl;
+        std::cerr << "nameSizeAligned" << " " << nameLengthAligned << std::endl;
+        std::cerr << "name" << " ";
+        for (auto c : _name) {
+            std::cerr << c;
+        }
+        for (uint32_t i = 0; i < nameLengthAligned - nameLength; ++i) {
+            std::cerr << uint8_t(0);
+        }
+        std::cerr << std::endl;
+    }
+
+    serializeDescImpl(serializer, _desc, resShapeLocation, false);
 }
 
 void DataNode::serializeDescImpl(
         BlobSerializer& serializer,
         const DataDesc& storedDesc,
-        const ShapeLocation& shapeLocation) const {
+        const ShapeLocation& shapeLocation, bool print) const {
     IE_ASSERT(storedDesc.numDims() <= MAX_DIMS_32);
 
     auto storedDimsOrder = storedDesc.dimsOrder();
@@ -263,6 +277,16 @@ void DataNode::serializeDescImpl(
     serializer.append(checked_cast<uint32_t>(shapeLocation.dimsOffset));
     serializer.append(checked_cast<uint32_t>(shapeLocation.stridesLocation));
     serializer.append(checked_cast<uint32_t>(shapeLocation.stridesOffset));
+
+    if (print) {
+        std::cerr << "storedDesc" << " " << storedDesc << std::endl;
+        std::cerr << "storedDimsOrder" << " " << storedDimsOrder << std::endl;
+        std::cerr << "storedPerm.size()" << " " << storedPerm.size() << std::endl;
+        std::cerr << "shapeLocation.dimsLocation" << " " << shapeLocation.dimsLocation << std::endl;
+        std::cerr << "shapeLocation.dimsOffset" << " " << shapeLocation.dimsOffset << std::endl;
+        std::cerr << "shapeLocation.stridesLocation" << " " << shapeLocation.stridesLocation << std::endl;
+        std::cerr << "shapeLocation.stridesOffset" << " " << shapeLocation.stridesOffset << std::endl;
+    }
 }
 
 void printTo(std::ostream& os, const Data& data) {
