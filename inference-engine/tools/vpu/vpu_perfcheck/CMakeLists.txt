@@ -38,7 +38,7 @@ function(add_perfcheck_target TARGET_NAME PLUGIN_NAME)
 
     target_link_libraries(${TARGET_NAME}
         PRIVATE
-            inference_engine format_reader
+            inference_engine format_reader ${NGRAPH_LIBRARIES}
             Threads::Threads
             onnx_importer)
 

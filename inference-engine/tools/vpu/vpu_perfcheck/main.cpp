@@ -34,8 +34,8 @@
 #include <inference_engine.hpp>
 #include <common.hpp>
 #include <vpu/vpu_config.hpp>
-#include <ngraph/frontend/onnx_import/onnx.hpp>
 #include <vpu/private_plugin_config.hpp>
+#include <onnx_import/onnx.hpp>
 
 static char* m_exename = nullptr;
 
@@ -158,7 +158,7 @@ static void setConfig(std::map<std::string, std::string>& config,
                       const std::string& file_config_cl) {
     config[CONFIG_KEY(LOG_LEVEL)] = CONFIG_VALUE(LOG_WARNING);
     config[InferenceEngine::MYRIAD_ENABLE_RECEIVING_TENSOR_TIME] = CONFIG_VALUE(YES);
-    config[InferenceEngine::MYRIAD_PERF_REPORT_MODE] = VPU_MYRIAD_CONFIG_VALUE(PER_STAGE);
+    config[InferenceEngine::MYRIAD_PERF_REPORT_MODE] = InferenceEngine::MYRIAD_PER_STAGE;
     config[InferenceEngine::MYRIAD_CUSTOM_LAYERS] = file_config_cl;
 }
 
@@ -456,13 +456,13 @@ int process(const std::string& modelFileName, const std::string& inputsDir,
 
         IECALL(request[r]->SetCompletionCallback(
                 [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode code) {
-                    std::cout << "Infer ended" << std::endl;
-                    InferenceEngine::Blob::Ptr blob;
-                    request->GetBlob("6381", blob, nullptr);
-                    std::cout << "Blob pointer: " << blob << std::endl;
-                    if (blob) {
-                        std::cout << "Detections num: " << blob->getTensorDesc().getDims()[0] << std::endl;
-                    }
+//                    std::cout << "Infer ended" << std::endl;
+//                    InferenceEngine::Blob::Ptr blob;
+//                    request->GetBlob("6381", blob, nullptr);
+//                    std::cout << "Blob pointer: " << blob << std::endl;
+//                    if (blob) {
+//                        std::cout << "Detections num: " << blob->getTensorDesc().getDims()[0] << std::endl;
+//                    }
 
                     if (code != InferenceEngine::OK) {
                         std::cout << "Infer failed: " << code << std::endl;

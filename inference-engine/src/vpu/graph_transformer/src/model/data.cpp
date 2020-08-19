@@ -243,12 +243,12 @@ void DataNode::serializeIOInfo(BlobSerializer& serializer, bool print) const {
     if (print) {
         std::cerr << "ioIdx" << " " << dataIOIdx << std::endl;
         std::cerr << "ioBufferOffset" << " " << ioBufferOffset << std::endl;
-        std::cerr << "nameSizeAligned" << " " << nameLengthAligned << std::endl;
+        std::cerr << "nameSizeAligned" << " " << nameSizeAligned << std::endl;
         std::cerr << "name" << " ";
         for (auto c : _name) {
             std::cerr << c;
         }
-        for (uint32_t i = 0; i < nameLengthAligned - nameLength; ++i) {
+        for (uint32_t i = 0; i < nameSizeAligned - nameLength; ++i) {
             std::cerr << uint8_t(0);
         }
         std::cerr << std::endl;
