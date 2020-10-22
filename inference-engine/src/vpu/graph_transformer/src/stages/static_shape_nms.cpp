@@ -3,7 +3,7 @@
 //
 
 #include <vpu/frontend/frontend.hpp>
-
+#include <vpu/compile_env.hpp>
 #include <precision_utils.h>
 
 #include <memory>
@@ -58,8 +58,10 @@ private:
 
     void serializeParamsImpl(BlobSerializer& serializer) const override {
         bool center_point_box = attrs().get<bool>("center_point_box");
+        bool use_ddr_buffer = tempBuffers().size() > 0;
 
         serializer.append(static_cast<int32_t>(center_point_box));
+        serializer.append(static_cast<int32_t>(use_ddr_buffer));
     }
 
     void serializeDataImpl(BlobSerializer& serializer) const override {
@@ -78,10 +80,38 @@ private:
         input5->serializeBuffer(serializer);
         outputData->serializeBuffer(serializer);
         outputDims->serializeBuffer(serializer);
+
+        if (tempBuffers().size())
+            tempBuffer(0)->serializeBuffer(serializer);
     }
 };
 
+bool isCMXEnough(int cmxSize, int numSlices, int spatDim, std::vector<int> bufferSizes) {
+    int curOffset = 0;
+    int curSlice = 0;
+
+    auto buffer_allocate = [&curOffset, &curSlice, &numSlices, cmxSize](int numBytes) {
+        if (curOffset + numBytes < cmxSize) {
+            curOffset += numBytes;
+        } else if (curSlice < numSlices && numBytes < cmxSize) {
+            curSlice++;
+            curOffset = numBytes;
+        } else {
+            return false;
+        }
+
+        return true;
+    };
+
+    for (auto s : bufferSizes) {
+        if (!buffer_allocate(s)) return false;
+    }
+
+    return true;
+}
+
 }  // namespace
+
 
 void FrontEnd::parseStaticShapeNMS(const Model& model, const ie::CNNLayerPtr& layer, const DataVector& inputs, const DataVector& outputs) const {
     VPU_THROW_UNLESS(inputs.size() == 6,
@@ -123,6 +153,21 @@ void FrontEnd::parseStaticShapeNMS(const Model& model, const ie::CNNLayerPtr& la
 
     auto stage = model->addNewStage<StaticShapeNMS>(layer->name, StageType::StaticShapeNMS, layer, usedInputs, DataVector{outIndices, outShape});
     stage->attrs().set<bool>("center_point_box", centerPointBox);
+
+    auto spatDim = inputs[0]->desc().dim(Dim::H);
+
+    const int ALIGN_VALUE = 64;
+    const int buffer_size0 = 2 * sizeof(int16_t) * 4 * spatDim;
+    const int buffer_size1 = 2 * sizeof(int16_t) * spatDim;
+    const int buffer_size2 = 2 * sizeof(int32_t) * spatDim;
+    const int buffer_size = buffer_size0 + buffer_size1 + buffer_size2 + 2 * ALIGN_VALUE;
+
+    const auto& env = CompileEnv::get();
+    const auto numSlices = env.resources.numSHAVEs;
+
+    const int buffer_size3 = 4 * sizeof(int32_t) * 256;
+    if (!isCMXEnough(CMX_BUFFER_SIZE, numSlices, spatDim, {buffer_size0, buffer_size1, buffer_size2, buffer_size3}))
+        model->addTempBuffer(stage, DataDesc({buffer_size}));
 }
 
 }  // namespace vpu
