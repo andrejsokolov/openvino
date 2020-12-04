@@ -194,8 +194,8 @@ PassSet::Ptr PassManager::buildMiddleEnd() {
     // Batch support
     //
 
-    ADD_PASS(adjustDataBatch);
-    ADD_DUMP_PASS("adjustDataBatch");
+    // ADD_PASS(adjustDataBatch);
+    // ADD_DUMP_PASS("adjustDataBatch");
 
     if (env.config.enableReplWithSCRelu) {
         ADD_PASS(replaceWithSCReLU);
