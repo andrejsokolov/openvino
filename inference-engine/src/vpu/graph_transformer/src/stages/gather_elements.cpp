@@ -123,6 +123,15 @@ void FrontEnd::parseGatherElements(const Model &model, const ie::CNNLayerPtr &la
 
     const auto axis = layer->GetParamAsInt("axis", 0);
 
+    const auto rank = inputs[0]->desc().numDims();
+    VPU_THROW_UNLESS(inputs[1]->desc().numDims() == rank, "rank of the second input must be equal to {}, actually {}",
+                     rank, inputs[1]->desc().numDims());
+    VPU_THROW_UNLESS(outputs[0]->desc().numDims() == rank, "rank of output must be equal to {}, actually {}",
+                     rank, outputs[0]->desc().numDims());
+
+    VPU_THROW_UNLESS(axis >= 0 && axis < rank, "axis must be in the range of [0, {}) , actually {}",
+                     rank, axis);
+
     _stageBuilder->addGatherElementsStage(model, layer->name, layer, inputs[0],
                                           inputs[1], outputs[0], axis);
 }
